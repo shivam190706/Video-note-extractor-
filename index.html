@@ -1,0 +1,537 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Video Note Extractor</title>
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@tabler/icons-webfont@latest/tabler-icons.min.css" />
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+      background: #0f0f13;
+      color: #f0f0f5;
+      min-height: 100vh;
+      padding: 2rem 1rem;
+    }
+
+    .container {
+      max-width: 780px;
+      margin: 0 auto;
+    }
+
+    /* Hero */
+    .hero {
+      background: linear-gradient(135deg, #7F77DD 0%, #D4537E 55%, #D85A30 100%);
+      border-radius: 16px;
+      padding: 2.5rem 2rem;
+      margin-bottom: 1.5rem;
+    }
+    .hero-eyebrow {
+      font-size: 12px;
+      letter-spacing: 0.1em;
+      text-transform: uppercase;
+      opacity: 0.75;
+      margin-bottom: 10px;
+    }
+    .hero h1 {
+      font-size: 30px;
+      font-weight: 600;
+      margin-bottom: 8px;
+      color: white;
+    }
+    .hero p {
+      font-size: 15px;
+      opacity: 0.8;
+      color: white;
+      margin-bottom: 1.5rem;
+    }
+    .input-row {
+      display: flex;
+      gap: 10px;
+    }
+    .url-input {
+      flex: 1;
+      padding: 11px 16px;
+      border-radius: 10px;
+      border: none;
+      font-size: 15px;
+      background: rgba(255,255,255,0.18);
+      color: white;
+      outline: none;
+      transition: background 0.15s;
+    }
+    .url-input::placeholder { color: rgba(255,255,255,0.55); }
+    .url-input:focus { background: rgba(255,255,255,0.28); }
+
+    .btn-analyze {
+      padding: 11px 24px;
+      background: white;
+      color: #7F77DD;
+      border: none;
+      border-radius: 10px;
+      font-size: 15px;
+      font-weight: 600;
+      cursor: pointer;
+      white-space: nowrap;
+      transition: opacity 0.15s, transform 0.1s;
+      display: flex;
+      align-items: center;
+      gap: 6px;
+    }
+    .btn-analyze:hover { opacity: 0.88; }
+    .btn-analyze:active { transform: scale(0.97); }
+    .btn-analyze:disabled { opacity: 0.45; cursor: not-allowed; }
+
+    /* Steps */
+    .steps {
+      display: grid;
+      grid-template-columns: repeat(4, 1fr);
+      gap: 10px;
+      margin-bottom: 1.5rem;
+    }
+    @media (max-width: 560px) {
+      .steps { grid-template-columns: repeat(2, 1fr); }
+    }
+    .step-card {
+      background: #1a1a24;
+      border: 1px solid #2a2a38;
+      border-radius: 12px;
+      padding: 1rem 0.75rem;
+      text-align: center;
+      transition: border-color 0.3s;
+    }
+    .step-icon {
+      font-size: 22px;
+      margin-bottom: 8px;
+      display: block;
+      color: #555570;
+      transition: color 0.3s;
+    }
+    .step-label {
+      font-size: 13px;
+      font-weight: 500;
+      color: #888;
+      margin-bottom: 3px;
+      transition: color 0.3s;
+    }
+    .step-sub { font-size: 11px; color: #555; }
+
+    .step-card.active { border-color: #7F77DD; }
+    .step-card.active .step-icon { color: #7F77DD; animation: pulse 1.2s infinite; }
+    .step-card.active .step-label { color: #b0aaff; }
+
+    .step-card.done { border-color: #1D9E75; }
+    .step-card.done .step-icon { color: #1D9E75; }
+    .step-card.done .step-label { color: #5fcfaa; }
+
+    @keyframes pulse { 0%,100%{opacity:1} 50%{opacity:0.35} }
+
+    /* Progress */
+    .progress-wrap {
+      display: none;
+      margin-bottom: 1.5rem;
+    }
+    .progress-wrap.show { display: block; }
+    .progress-label {
+      font-size: 13px;
+      color: #888;
+      margin-bottom: 8px;
+      display: flex;
+      justify-content: space-between;
+    }
+    .progress-bar {
+      height: 5px;
+      background: #1a1a24;
+      border-radius: 99px;
+      overflow: hidden;
+    }
+    .progress-fill {
+      height: 100%;
+      background: linear-gradient(90deg, #7F77DD, #D4537E, #D85A30);
+      border-radius: 99px;
+      width: 0%;
+      transition: width 0.5s ease;
+    }
+
+    /* Error */
+    .error-box {
+      display: none;
+      background: #2a1515;
+      border: 1px solid #7A2020;
+      border-radius: 10px;
+      padding: 1rem 1.25rem;
+      color: #f09595;
+      font-size: 14px;
+      margin-bottom: 1.25rem;
+    }
+    .error-box.show { display: flex; align-items: center; gap: 10px; }
+
+    /* Results */
+    .results { display: none; }
+    .results.show { display: block; }
+
+    .meta-row {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 10px;
+      margin-bottom: 1.25rem;
+    }
+    .meta-card {
+      background: #1a1a24;
+      border: 1px solid #2a2a38;
+      border-radius: 10px;
+      padding: 0.9rem 1rem;
+      text-align: center;
+    }
+    .meta-val {
+      font-size: 24px;
+      font-weight: 600;
+      background: linear-gradient(135deg, #7F77DD, #D4537E);
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+      background-clip: text;
+    }
+    .meta-lbl { font-size: 12px; color: #666; margin-top: 3px; }
+
+    /* Tabs */
+    .tabs {
+      display: flex;
+      gap: 6px;
+      margin-bottom: 1rem;
+    }
+    .tab {
+      padding: 8px 20px;
+      border-radius: 8px;
+      border: 1px solid #2a2a38;
+      background: #1a1a24;
+      font-size: 14px;
+      cursor: pointer;
+      color: #888;
+      font-weight: 400;
+      transition: all 0.15s;
+    }
+    .tab.active {
+      background: linear-gradient(135deg, #7F77DD, #D4537E);
+      color: white;
+      border-color: transparent;
+      font-weight: 500;
+    }
+    .tab:not(.active):hover { border-color: #7F77DD; color: #b0aaff; }
+
+    .tab-panel { display: none; }
+    .tab-panel.active { display: block; }
+
+    /* Notes */
+    .notes-box {
+      background: #1a1a24;
+      border: 1px solid #2a2a38;
+      border-radius: 12px;
+      padding: 1.5rem;
+      font-size: 14px;
+      line-height: 1.8;
+      color: #ddd;
+      white-space: pre-wrap;
+      max-height: 400px;
+      overflow-y: auto;
+    }
+
+    /* Transcript */
+    .transcript-list {
+      max-height: 400px;
+      overflow-y: auto;
+      display: flex;
+      flex-direction: column;
+      gap: 6px;
+    }
+    .segment {
+      display: flex;
+      gap: 12px;
+      align-items: flex-start;
+      padding: 9px 14px;
+      background: #1a1a24;
+      border: 1px solid #2a2a38;
+      border-radius: 8px;
+      font-size: 13px;
+    }
+    .seg-time {
+      font-weight: 600;
+      color: #7F77DD;
+      white-space: nowrap;
+      min-width: 52px;
+      font-size: 12px;
+      padding-top: 2px;
+    }
+    .seg-text { color: #ccc; line-height: 1.55; }
+
+    /* Download */
+    .download-row {
+      display: flex;
+      gap: 8px;
+      margin-top: 1rem;
+    }
+    .btn-dl {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      padding: 8px 18px;
+      border-radius: 8px;
+      border: 1px solid #2a2a38;
+      background: #1a1a24;
+      font-size: 13px;
+      cursor: pointer;
+      color: #aaa;
+      transition: all 0.15s;
+    }
+    .btn-dl:hover { border-color: #7F77DD; color: #b0aaff; }
+
+    /* Scrollbar */
+    ::-webkit-scrollbar { width: 5px; }
+    ::-webkit-scrollbar-track { background: #1a1a24; }
+    ::-webkit-scrollbar-thumb { background: #333; border-radius: 99px; }
+  </style>
+</head>
+<body>
+<div class="container">
+
+  <div class="hero">
+    <div class="hero-eyebrow">AI-Powered</div>
+    <h1>Video Note Extractor</h1>
+    <p>Paste any YouTube URL — get structured notes & full transcript in minutes</p>
+    <div class="input-row">
+      <input class="url-input" type="text" id="url-input" placeholder="https://youtube.com/watch?v=..." />
+      <button class="btn-analyze" id="analyze-btn" onclick="startAnalyze()">
+        <i class="ti ti-player-play"></i> Analyze
+      </button>
+    </div>
+  </div>
+
+  <div class="steps">
+    <div class="step-card" id="step-1">
+      <span class="step-icon"><i class="ti ti-download"></i></span>
+      <div class="step-label">Download</div>
+      <div class="step-sub">yt-dlp</div>
+    </div>
+    <div class="step-card" id="step-2">
+      <span class="step-icon"><i class="ti ti-microphone"></i></span>
+      <div class="step-label">Transcribe</div>
+      <div class="step-sub">Whisper AI</div>
+    </div>
+    <div class="step-card" id="step-3">
+      <span class="step-icon"><i class="ti ti-brain"></i></span>
+      <div class="step-label">Summarize</div>
+      <div class="step-sub">LLaMA3</div>
+    </div>
+    <div class="step-card" id="step-4">
+      <span class="step-icon"><i class="ti ti-file-check"></i></span>
+      <div class="step-label">Save</div>
+      <div class="step-sub">Export files</div>
+    </div>
+  </div>
+
+  <div class="progress-wrap" id="progress-wrap">
+    <div class="progress-label">
+      <span id="progress-label">Starting...</span>
+      <span id="progress-pct">0%</span>
+    </div>
+    <div class="progress-bar">
+      <div class="progress-fill" id="progress-fill"></div>
+    </div>
+  </div>
+
+  <div class="error-box" id="error-box">
+    <i class="ti ti-alert-circle" style="font-size:18px;flex-shrink:0"></i>
+    <span id="error-msg"></span>
+  </div>
+
+  <div class="results" id="results">
+    <div class="meta-row">
+      <div class="meta-card">
+        <div class="meta-val" id="seg-count">—</div>
+        <div class="meta-lbl">Segments</div>
+      </div>
+      <div class="meta-card">
+        <div class="meta-val" id="word-count">—</div>
+        <div class="meta-lbl">Words</div>
+      </div>
+      <div class="meta-card">
+        <div class="meta-val" id="note-lines">—</div>
+        <div class="meta-lbl">Note lines</div>
+      </div>
+    </div>
+
+    <div class="tabs">
+      <button class="tab active" onclick="switchTab('notes', this)">
+        <i class="ti ti-notes" style="font-size:14px;vertical-align:-2px;margin-right:4px"></i>Notes
+      </button>
+      <button class="tab" onclick="switchTab('transcript', this)">
+        <i class="ti ti-timeline" style="font-size:14px;vertical-align:-2px;margin-right:4px"></i>Transcript
+      </button>
+    </div>
+
+    <div class="tab-panel active" id="tab-notes">
+      <div class="notes-box" id="notes-content"></div>
+      <div class="download-row">
+    <button class="btn-dl" onclick="downloadFile('notes')">
+        <i class="ti ti-download"></i> Download notes
+    </button>
+    <button class="btn-dl" onclick="downloadPDF()">
+        <i class="ti ti-file-type-pdf"></i> Download PDF
+    </button>
+</div>
+    </div>
+
+    <div class="tab-panel" id="tab-transcript">
+      <div class="transcript-list" id="transcript-list"></div>
+      <div class="download-row">
+        <button class="btn-dl" onclick="downloadFile('transcript')">
+          <i class="ti ti-download"></i> Download transcript
+        </button>
+      </div>
+    </div>
+  </div>
+
+</div>
+
+<script>
+  let resultData = null;
+
+  const STEPS = [
+    { id: 'step-1', label: 'Downloading audio...', pct: 20 },
+    { id: 'step-2', label: 'Transcribing with Whisper...', pct: 50 },
+    { id: 'step-3', label: 'Generating notes with LLaMA3...', pct: 80 },
+    { id: 'step-4', label: 'Saving files...', pct: 95 },
+  ];
+
+  function setStep(idx) {
+    STEPS.forEach((s, i) => {
+      const el = document.getElementById(s.id);
+      el.classList.remove('active', 'done');
+      if (i < idx) el.classList.add('done');
+      if (i === idx) el.classList.add('active');
+    });
+    if (idx < STEPS.length) {
+      document.getElementById('progress-label').textContent = STEPS[idx].label;
+      document.getElementById('progress-pct').textContent = STEPS[idx].pct + '%';
+      document.getElementById('progress-fill').style.width = STEPS[idx].pct + '%';
+    }
+  }
+
+  function simulateSteps() {
+    let i = 0;
+    return setInterval(() => {
+      if (i < STEPS.length - 1) { i++; setStep(i); }
+    }, 8000);
+  }
+
+  async function startAnalyze() {
+    const url = document.getElementById('url-input').value.trim();
+    if (!url) return;
+
+    document.getElementById('error-box').classList.remove('show');
+    document.getElementById('results').classList.remove('show');
+    document.getElementById('progress-wrap').classList.add('show');
+    document.getElementById('analyze-btn').disabled = true;
+
+    setStep(0);
+
+    try {
+      const stepTimer = simulateSteps();
+
+      const res = await fetch('http://127.0.0.1:8000/analyze', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ url })
+      });
+
+      clearInterval(stepTimer);
+
+      if (!res.ok) {
+        const err = await res.json();
+        throw new Error(err.detail || 'Server returned an error.');
+      }
+
+      const data = await res.json();
+      resultData = data;
+
+      STEPS.forEach(s => {
+        document.getElementById(s.id).classList.remove('active');
+        document.getElementById(s.id).classList.add('done');
+      });
+      document.getElementById('progress-fill').style.width = '100%';
+      document.getElementById('progress-pct').textContent = '100%';
+      document.getElementById('progress-label').textContent = 'Done!';
+
+      setTimeout(() => {
+        document.getElementById('progress-wrap').classList.remove('show');
+        showResults(data);
+      }, 700);
+
+    } catch (e) {
+      document.getElementById('progress-wrap').classList.remove('show');
+      STEPS.forEach(s => document.getElementById(s.id).classList.remove('active', 'done'));
+      document.getElementById('error-msg').textContent = e.message;
+      document.getElementById('error-box').classList.add('show');
+    }
+
+    document.getElementById('analyze-btn').disabled = false;
+  }
+
+  function showResults(data) {
+    console.log("API Response:", data);
+    document.getElementById('seg-count').textContent = data.transcript_length ?? '—';
+    const words = data.notes ? data.notes.trim().split(/\s+/).length : 0;
+    document.getElementById('word-count').textContent = words;
+    document.getElementById('note-lines').textContent = data.notes
+      ? data.notes.split('\n').filter(l => l.trim()).length : 0;
+
+    document.getElementById('notes-content').textContent = data.notes || 'No notes generated.';
+
+    const list = document.getElementById('transcript-list');
+    list.innerHTML = '';
+    if (data.transcript && Array.isArray(data.transcript)) {
+      data.transcript.forEach(seg => {
+        const div = document.createElement('div');
+        div.className = 'segment';
+        div.innerHTML = `<span class="seg-time">${parseFloat(seg.start).toFixed(1)}s</span><span class="seg-text">${seg.text}</span>`;
+        list.appendChild(div);
+      });
+    } else {
+      list.innerHTML = '<div style="font-size:13px;color:#555;padding:1rem">Transcript not included in API response.</div>';
+    }
+
+    document.getElementById('results').classList.add('show');
+  }
+
+  function switchTab(name, btn) {
+    document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
+    document.querySelectorAll('.tab-panel').forEach(p => p.classList.remove('active'));
+    btn.classList.add('active');
+    document.getElementById('tab-' + name).classList.add('active');
+  }
+
+  function downloadFile(type) {
+    if (!resultData) return;
+    const content = type === 'notes'
+      ? resultData.notes
+      : (resultData.transcript || []).map(s => `[${parseFloat(s.start).toFixed(2)}] ${s.text}`).join('\n');
+    const blob = new Blob([content], { type: 'text/plain' });
+    const a = document.createElement('a');
+    a.href = URL.createObjectURL(blob);
+    a.download = type === 'notes' ? 'notes.txt' : 'transcript.txt';
+    a.click();
+  }
+
+  function downloadPDF() {
+    if (!resultData || !resultData.pdf_file) return;
+    const path = encodeURIComponent(resultData.pdf_file);
+    window.open(`http://127.0.0.1:8000/download-pdf?path=${path}`, '_blank');
+}
+
+  document.getElementById('url-input').addEventListener('keydown', e => {
+    if (e.key === 'Enter') startAnalyze();
+  });
+</script>
+</body>
+</html>
